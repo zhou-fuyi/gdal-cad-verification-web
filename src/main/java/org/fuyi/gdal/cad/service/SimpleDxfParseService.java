@@ -16,7 +16,7 @@ import java.util.concurrent.*;
 @Service
 public class SimpleDxfParseService implements DxfParseService{
 
-    private final int DEFAULT_CORE_SIZE = 8;
+    private final int DEFAULT_CORE_SIZE = 10;
     private final int DEFAULT_MAX_SIZE = 100;
 
 //    private Executor executor = Executors.newFixedThreadPool(DEFAULT_THREAD_COUNT);
@@ -44,16 +44,16 @@ public class SimpleDxfParseService implements DxfParseService{
         int index = 0;
         Collection<DxfGeometry> dxfGeometries = new ArrayList<>(Long.valueOf(featureCount).intValue());
 
-        CountDownLatch countDownLatch = new CountDownLatch(DEFAULT_MAX_SIZE);
+        CountDownLatch countDownLatch = new CountDownLatch(DEFAULT_CORE_SIZE);
 
-        int tileSize = Long.valueOf(featureCount).intValue() / DEFAULT_MAX_SIZE;
+        int tileSize = Long.valueOf(featureCount).intValue() / DEFAULT_CORE_SIZE;
         // 余数
-        int remainder = Long.valueOf(featureCount).intValue() % DEFAULT_MAX_SIZE;
+        int remainder = Long.valueOf(featureCount).intValue() % DEFAULT_CORE_SIZE;
 
         long startTime = System.currentTimeMillis();
-        while (index < DEFAULT_MAX_SIZE){
+        while (index < DEFAULT_CORE_SIZE){
             int featureEndIndex = (index + 1) * tileSize;
-            if (index == (DEFAULT_MAX_SIZE -1)){
+            if (index == (DEFAULT_CORE_SIZE -1)){
                 featureEndIndex += remainder;
             }
             int finalIndex = index;
@@ -75,14 +75,14 @@ public class SimpleDxfParseService implements DxfParseService{
                 }
                 countDownLatch.countDown();
                 long finalEndTime = System.currentTimeMillis();
-                System.out.println("当前线程：" + Thread.currentThread().getName() + "执行结束，累计耗时：" + (finalEndTime - finalStartTime));
+                System.out.println("当前线程：" + Thread.currentThread().getName() + "执行结束，累计耗时约：" + ((finalEndTime - finalStartTime) / 60000) + "秒");
             });
             index ++;
         }
         countDownLatch.await();
         dataSource.delete();
         long endTime = System.currentTimeMillis();
-        System.out.println("执行结果，共计耗时：" + (endTime - startTime));
+        System.out.println("执行结果，共计耗时约：" + ((endTime - startTime) / 60000) + "秒");
         return dxfGeometries;
     }
 
