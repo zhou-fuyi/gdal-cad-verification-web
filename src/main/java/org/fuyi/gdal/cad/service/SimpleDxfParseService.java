@@ -11,16 +11,17 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 @Service
 public class SimpleDxfParseService implements DxfParseService{
 
-    private final int DEFAULT_THREAD_COUNT = 100;
-    
-    private Executor executor = Executors.newFixedThreadPool(DEFAULT_THREAD_COUNT);
+    private final int DEFAULT_CORE_SIZE = 8;
+    private final int DEFAULT_MAX_SIZE = 100;
+
+//    private Executor executor = Executors.newFixedThreadPool(DEFAULT_THREAD_COUNT);
+    private Executor executor = new ThreadPoolExecutor(DEFAULT_CORE_SIZE, DEFAULT_MAX_SIZE,
+        6000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 
     @Override
     public Collection<DxfGeometry> parse(File dxfFile) throws IllegalAccessException, InterruptedException {
@@ -43,16 +44,16 @@ public class SimpleDxfParseService implements DxfParseService{
         int index = 0;
         Collection<DxfGeometry> dxfGeometries = new ArrayList<>(Long.valueOf(featureCount).intValue());
 
-        CountDownLatch countDownLatch = new CountDownLatch(DEFAULT_THREAD_COUNT);
+        CountDownLatch countDownLatch = new CountDownLatch(DEFAULT_MAX_SIZE);
 
-        int tileSize = Long.valueOf(featureCount).intValue() / DEFAULT_THREAD_COUNT;
+        int tileSize = Long.valueOf(featureCount).intValue() / DEFAULT_MAX_SIZE;
         // 余数
-        int remainder = Long.valueOf(featureCount).intValue() % DEFAULT_THREAD_COUNT;
+        int remainder = Long.valueOf(featureCount).intValue() % DEFAULT_MAX_SIZE;
 
         long startTime = System.currentTimeMillis();
-        while (index < DEFAULT_THREAD_COUNT){
+        while (index < DEFAULT_MAX_SIZE){
             int featureEndIndex = (index + 1) * tileSize;
-            if (index == (DEFAULT_THREAD_COUNT -1)){
+            if (index == (DEFAULT_MAX_SIZE -1)){
                 featureEndIndex += remainder;
             }
             int finalIndex = index;

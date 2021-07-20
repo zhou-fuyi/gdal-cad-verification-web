@@ -1,4 +1,4 @@
-FROM osgeo/gdal:ubuntu-full-latest
+FROM osgeo/gdal:ubuntu-small-latest
 
 MAINTAINER Fuyi
 

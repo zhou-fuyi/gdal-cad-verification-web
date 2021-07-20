@@ -8,16 +8,6 @@ public class DxfGeometry {
 
     private String layer;
 
-    private String paperSpace;
-
-    private String subClasses;
-
-    private String lineType;
-
-    private String entityHandle;
-
-    private String text;
-
     private GeomType geomType;
 
     /**
@@ -29,14 +19,9 @@ public class DxfGeometry {
     public DxfGeometry() {
     }
 
-    public DxfGeometry(byte[] geometry, String layer, String paperSpace, String subClasses, String lineType, String entityHandle, String text, GeomType geomType, String[] fields) {
+    public DxfGeometry(byte[] geometry, String layer, GeomType geomType, String[] fields) {
         this.geometry = geometry;
         this.layer = layer;
-        this.paperSpace = paperSpace;
-        this.subClasses = subClasses;
-        this.lineType = lineType;
-        this.entityHandle = entityHandle;
-        this.text = text;
         this.geomType = geomType;
         this.fields = fields;
     }
@@ -55,46 +40,6 @@ public class DxfGeometry {
 
     public void setLayer(String layer) {
         this.layer = layer;
-    }
-
-    public String getPaperSpace() {
-        return paperSpace;
-    }
-
-    public void setPaperSpace(String paperSpace) {
-        this.paperSpace = paperSpace;
-    }
-
-    public String getSubClasses() {
-        return subClasses;
-    }
-
-    public void setSubClasses(String subClasses) {
-        this.subClasses = subClasses;
-    }
-
-    public String getLineType() {
-        return lineType;
-    }
-
-    public void setLineType(String lineType) {
-        this.lineType = lineType;
-    }
-
-    public String getEntityHandle() {
-        return entityHandle;
-    }
-
-    public void setEntityHandle(String entityHandle) {
-        this.entityHandle = entityHandle;
-    }
-
-    public String getText() {
-        return text;
-    }
-
-    public void setText(String text) {
-        this.text = text;
     }
 
     public GeomType getGeomType() {
@@ -119,11 +64,6 @@ public class DxfGeometry {
 //                "geometry=" + Arrays.toString(geometry) +
                 "geometry=" + geometry +
                 ", layer='" + layer + '\'' +
-                ", paperSpace='" + paperSpace + '\'' +
-                ", subClasses='" + subClasses + '\'' +
-                ", lineType='" + lineType + '\'' +
-                ", entityHandle='" + entityHandle + '\'' +
-                ", text='" + text + '\'' +
                 ", geomType=" + geomType +
                 ", fields=" + Arrays.toString(fields) +
                 '}';
