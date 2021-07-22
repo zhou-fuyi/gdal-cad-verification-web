@@ -3,12 +3,14 @@ package org.fuyi.gdal.cad.core;
 import org.gdal.ogr.Geometry;
 import org.gdal.osr.SpatialReference;
 
+import java.util.Map;
 import java.util.Vector;
 
 public interface DatasourceTransfer {
 
     boolean translateLayer(String srcSourPath,
                            String destSourceDbPath,
+                           Map<Integer, String> filters,
                            Vector lcoOptions,
                            String nlnNameForNewLayer,
                            boolean bTransform,

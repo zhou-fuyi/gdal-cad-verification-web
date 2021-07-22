@@ -5,6 +5,7 @@ import org.gdal.ogr.*;
 import org.gdal.osr.SpatialReference;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
 import java.util.Vector;
 
 @Component("simpleTransfer")
@@ -33,6 +34,7 @@ public class SimpleDatasourceTransfer implements DatasourceTransfer {
     @Override
     public boolean translateLayer(String srcSourPath,
                                   String destSourceDbPath,
+                                  Map<Integer, String> filters,
                                   Vector lcoOptions,
                                   String nlnNameForNewLayer,
                                   boolean bTransform,
@@ -61,7 +63,7 @@ public class SimpleDatasourceTransfer implements DatasourceTransfer {
         if (destSource == null) {
             throw new RuntimeException("[" + destSourceDbPath + "] 无法获取链接");
         }
-        Layer srcLayer = srcSource.GetLayer(0);
+        Layer srcLayer = srcSource.ExecuteSQL(filters.get(nltForGeomType));
 
 //        boolean bForceToPoint = false;
 //        boolean bForceToLineString = false;

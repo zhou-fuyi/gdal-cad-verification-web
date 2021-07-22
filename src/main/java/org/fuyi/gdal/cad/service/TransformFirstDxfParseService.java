@@ -12,10 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Vector;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 @Service
@@ -34,9 +31,14 @@ public class TransformFirstDxfParseService implements DxfParseService {
         gdal.SetConfigOption("GDAL_FILENAME_IS_UTF8", "YES");
         // 属性表字段支持中文
 //        gdal.SetConfigOption("SHAPE_ENCODING", "UTF-8");
-        gdal.SetConfigOption("SHAPE_ENCODING", "GBK");
+//        gdal.SetConfigOption("SHAPE_ENCODING", "GBK");
         gdal.SetConfigOption("DXF_FEATURE_LIMIT_PER_BLOCK", "-1");
-        gdal.SetConfigOption("DXF_ENCODING", "ASCII");
+        gdal.SetConfigOption("PGCLIENTENCODING", "LATIN1");
+//        gdal.SetConfigOption("DXF_ENCODING", "ASCII");
+        gdal.SetConfigOption("DXF_ENCODING", " UTF-8");
+//        gdal.SetConfigOption("DXF_INLINE_BLOCKS", "FALSE");
+        gdal.SetConfigOption("DXF_MERGE_BLOCK_GEOMETRIES", "FALSE");
+        gdal.SetConfigOption("DXF_TRANSLATE_ESCAPE_SEQUENCES", "TRUE");
 
         long startTime = System.currentTimeMillis();
         DataSource srcSource = ogr.Open(dxfFile.getAbsolutePath(), false);
@@ -58,72 +60,50 @@ public class TransformFirstDxfParseService implements DxfParseService {
         lcoOptions.add("FID=gid");
         lcoOptions.add("PRECISION=NO");
         lcoOptions.add("OVERWRITE=YES");
-//        lcoOptions.add("SPATIAL_INDEX=YES");
-        String fileName = Base64.getEncoder().encodeToString(dxfFile.getName().getBytes(StandardCharsets.UTF_8)) + "_";
-//        String[] nlnLayerNames = new String[]{fileName + "point", fileName + "line", fileName + "polygon", fileName + "multi_line"};
-//        int[] nltGeomTypes = new int[]{ogr.wkbPoint25D, ogr.wkbLineString25D, ogr.wkbPolygon25D, ogr.wkbMultiLineString25D};
-//        int[] nltGeomTypes = new int[]{ogr.wkbPoint, ogr.wkbLineString, ogr.wkbPolygon, ogr.wkbMultiLineString};
-        String[] nlnLayerNames = new String[]{fileName + "point_z", fileName + "line", fileName + "line_z", fileName + "multi_line_z"};
-        int[] nltGeomTypes = new int[]{ogr.wkbPoint25D, ogr.wkbLineString, ogr.wkbLineString25D, ogr.wkbMultiLineString25D};
-        boolean bSkipFailures = true;
+        String fileName = Base64.getEncoder().encodeToString(dxfFile.getName().getBytes(StandardCharsets.UTF_8));
+
+        String[] nlnLayerNames = new String[]{fileName + "point", fileName + "line", fileName + "polygon"};
+        Map<Integer, String> filters = new HashMap<>(3);
+        filters.put(ogr.wkbPoint, "Select *, ogr_style from entities where OGR_GEOMETRY LIKE '%POINT%'");
+        filters.put(ogr.wkbLineString, "Select *, ogr_style from entities where OGR_GEOMETRY LIKE '%LINESTRING%'");
+        filters.put(ogr.wkbPolygon, "Select *, ogr_style from entities where OGR_GEOMETRY LIKE '%LINESTRING%'");
+        int[] nltGeomTypes = new int[]{ogr.wkbPoint, ogr.wkbLineString, ogr.wkbPolygon};
+
         long zeroLayerFeatureCount = sourceLayer.GetFeatureCount();
+
         CountDownLatch countDownLatch = new CountDownLatch(nltGeomTypes.length);
-        for (int index = 0; index < nltGeomTypes.length; index++) {
-            try{
-                int finalIndex = index;
-                ExecutorTemplate.executor.execute(() -> {
-                    if (!datasourceTransfer.translateLayer(dxfFile.getAbsolutePath(),
-                            dbPath,
-                            lcoOptions,
-                            nlnLayerNames[finalIndex],
-                            false,
-                            null,
-                            null,
-                            null,
-                            false,
-                            nltGeomTypes[finalIndex],
-                            true,
-                            SimpleDatasourceTransfer.GeomOperation.NONE,
-                            0l,
-                            null,
-                            zeroLayerFeatureCount,
-                            null,
-                            null,
-                            false,
-                            null,
-                            null,
-                            null)) {
-                        System.err.println("图层[" + nlnLayerNames[finalIndex] + "]提取失败");
-                    }
-                    countDownLatch.countDown();
-                    System.out.println("外层图层分层作业: 线程" + Thread.currentThread().getName() + "已完成作业");
-                });
-//                if (!datasourceTransfer.translateLayer(dxfFile.getAbsolutePath(),
-//                        dbPath,
-//                        lcoOptions,
-//                        nlnLayerNames[finalIndex],
-//                        false,
-//                        null,
-//                        null,
-//                        null,
-//                        false,
-//                        nltGeomTypes[finalIndex],
-//                        true,
-//                        SimpleDatasourceTransfer.GeomOperation.NONE,
-//                        0l,
-//                        null,
-//                        zeroLayerFeatureCount,
-//                        null,
-//                        null,
-//                        false,
-//                        null,
-//                        null,
-//                        null)) {
-//                    System.err.println("图层[" + nlnLayerNames[finalIndex] + "]提取失败");
-//                }
-            }catch (Exception e){
-                e.printStackTrace();
-            }
+        int index = 0;
+        while (index < nltGeomTypes.length) {
+            int finalIndex = index;
+            ExecutorTemplate.executor.execute(() -> {
+                if (!datasourceTransfer.translateLayer(dxfFile.getAbsolutePath(),
+                        dbPath,
+                        filters,
+                        lcoOptions,
+                        nlnLayerNames[finalIndex],
+                        false,
+                        null,
+                        null,
+                        null,
+                        false,
+                        nltGeomTypes[finalIndex],
+                        true,
+                        SimpleDatasourceTransfer.GeomOperation.NONE,
+                        0l,
+                        null,
+                        zeroLayerFeatureCount,
+                        null,
+                        null,
+                        false,
+                        null,
+                        null,
+                        null)) {
+                    System.err.println("图层[" + nlnLayerNames[finalIndex] + "]提取失败");
+                }
+                countDownLatch.countDown();
+                System.out.println("外层图层分层作业: 线程" + Thread.currentThread().getName() + "已完成作业");
+            });
+            index++;
         }
         countDownLatch.await();
         long endTime = System.currentTimeMillis();
