@@ -14,11 +14,12 @@ import java.util.concurrent.locks.StampedLock;
 @Component("shardingTransfer")
 public class ConcurrentShardingDataSourceTransfer implements DatasourceTransfer {
 
-    private static final int DEFAULT_TILE_SIZE = 2500;
-    private static final int DEFAULT_THRESHOLD = 10000;
+    private static final int DEFAULT_TILE_SIZE = 5000;
+    private static final int DEFAULT_THRESHOLD = 20000;
+    private static final int DEFAULT_TILE_SIZE_THRESHOLD = 70000;
 
     static boolean bSkipFailures = true;
-    static int nGroupTransactions = 100;
+    static int nGroupTransactions = 2000;
     //    static int nGroupTransactions = 1;
     static boolean bPreserveFID = false;
     static final int OGRNullFID = -1;
@@ -56,7 +57,11 @@ public class ConcurrentShardingDataSourceTransfer implements DatasourceTransfer 
         if (featureCount > DEFAULT_THRESHOLD) {
             int availProcessors = Runtime.getRuntime().availableProcessors();
             tileSize = Long.valueOf(featureCount).intValue() / (availProcessors * 2);
+            if (tileSize > DEFAULT_TILE_SIZE_THRESHOLD){
+                tileSize = DEFAULT_TILE_SIZE_THRESHOLD;
+            }
         }
+        System.out.println("Tile Size is : " + tileSize);
         // 分片逻辑
         int tileCount = Long.valueOf(featureCount).intValue() / tileSize;
         // 余数
@@ -236,6 +241,7 @@ public class ConcurrentShardingDataSourceTransfer implements DatasourceTransfer 
         if (nGroupTransactions > 0)
             destLayer.StartTransaction();
 
+        System.out.println("Table is :" + nlnNameForNewLayer + " And the StartIndex is : " + finalFeatureStartIndex);
         srcLayer.SetNextByIndex(finalFeatureStartIndex);
         while (finalFeatureStartIndex++ < finalFeatureEndIndex) {
             Feature destFeature = null;
@@ -255,7 +261,6 @@ public class ConcurrentShardingDataSourceTransfer implements DatasourceTransfer 
 
                 if (++nFeaturesInTransaction == nGroupTransactions) {
                     destLayer.CommitTransaction();
-                    System.out.println("Owner Commit");
                     destLayer.StartTransaction();
                     nFeaturesInTransaction = 0;
                 }
@@ -332,9 +337,11 @@ public class ConcurrentShardingDataSourceTransfer implements DatasourceTransfer 
         }
         if (nGroupTransactions > 0) {
             destLayer.CommitTransaction();
-            System.out.println("nFeaturesInTransaction is " + nFeaturesInTransaction);
-            System.out.println("Last Commit");
         }
+        srcLayer.delete();
+        destLayer.delete();
+        srcSource.delete();
+        destSource.delete();
         return true;
     }
 }

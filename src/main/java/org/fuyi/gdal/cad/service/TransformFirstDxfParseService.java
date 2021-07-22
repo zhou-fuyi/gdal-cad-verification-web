@@ -23,8 +23,7 @@ public class TransformFirstDxfParseService implements DxfParseService {
 //    @Qualifier("simpleTransfer")
     private DatasourceTransfer datasourceTransfer;
 
-    @Override
-    public Collection<DxfGeometry> parse(File dxfFile) throws IllegalAccessException, InterruptedException {
+    static {
         // 注册驱动
         ogr.RegisterAll();
         // 支持中文路径
@@ -39,7 +38,10 @@ public class TransformFirstDxfParseService implements DxfParseService {
 //        gdal.SetConfigOption("DXF_INLINE_BLOCKS", "FALSE");
         gdal.SetConfigOption("DXF_MERGE_BLOCK_GEOMETRIES", "FALSE");
         gdal.SetConfigOption("DXF_TRANSLATE_ESCAPE_SEQUENCES", "TRUE");
+    }
 
+    @Override
+    public Collection<DxfGeometry> parse(File dxfFile) throws IllegalAccessException, InterruptedException {
         long startTime = System.currentTimeMillis();
         DataSource srcSource = ogr.Open(dxfFile.getAbsolutePath(), false);
         if (srcSource == null) {
@@ -64,9 +66,9 @@ public class TransformFirstDxfParseService implements DxfParseService {
 
         String[] nlnLayerNames = new String[]{fileName + "point", fileName + "line", fileName + "polygon"};
         Map<Integer, String> filters = new HashMap<>(3);
-        filters.put(ogr.wkbPoint, "Select *, ogr_style from entities where OGR_GEOMETRY LIKE '%POINT%'");
-        filters.put(ogr.wkbLineString, "Select *, ogr_style from entities where OGR_GEOMETRY LIKE '%LINESTRING%'");
-        filters.put(ogr.wkbPolygon, "Select *, ogr_style from entities where OGR_GEOMETRY LIKE '%LINESTRING%'");
+        filters.put(ogr.wkbPoint, "Select * from entities where OGR_GEOMETRY LIKE '%POINT%'");
+        filters.put(ogr.wkbLineString, "Select * from entities where OGR_GEOMETRY LIKE '%LINESTRING%'");
+        filters.put(ogr.wkbPolygon, "Select * from entities where OGR_GEOMETRY LIKE '%LINESTRING%'");
         int[] nltGeomTypes = new int[]{ogr.wkbPoint, ogr.wkbLineString, ogr.wkbPolygon};
 
         long zeroLayerFeatureCount = sourceLayer.GetFeatureCount();

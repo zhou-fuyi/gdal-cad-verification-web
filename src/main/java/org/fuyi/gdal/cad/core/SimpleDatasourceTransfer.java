@@ -12,8 +12,8 @@ import java.util.Vector;
 public class SimpleDatasourceTransfer implements DatasourceTransfer {
 
     static boolean bSkipFailures = true;
-    //    static int nGroupTransactions = 200;
-    static int nGroupTransactions = 1;
+    static int nGroupTransactions = 200;
+//    static int nGroupTransactions = 1;
     static boolean bPreserveFID = false;
     static final int OGRNullFID = -1;
     static int nFIDToFetch = OGRNullFID;
@@ -65,26 +65,17 @@ public class SimpleDatasourceTransfer implements DatasourceTransfer {
         }
         Layer srcLayer = srcSource.ExecuteSQL(filters.get(nltForGeomType));
 
-//        boolean bForceToPoint = false;
-//        boolean bForceToLineString = false;
-//        boolean bForceToPolygon = false;
 
         boolean bForceToPoint = false;
         boolean bForceToLineString = false;
-        boolean         bForceToPolygon = false;
-        boolean         bForceToMultiPolygon = false;
-        boolean         bForceToMultiLineString = false;
+        boolean bForceToPolygon = false;
 
         if (wkbFlatten(nltForGeomType) == ogr.wkbPoint) {
             bForceToPoint = true;
         } else if (wkbFlatten(nltForGeomType) == ogr.wkbLineString) {
-//            bForceToLineString = true;
-        } else if( wkbFlatten(nltForGeomType) == ogr.wkbPolygon )
+            bForceToLineString = true;
+        } else if (wkbFlatten(nltForGeomType) == ogr.wkbPolygon)
             bForceToPolygon = true;
-        else if( wkbFlatten(nltForGeomType) == ogr.wkbMultiPolygon )
-            bForceToMultiPolygon = true;
-        else if( wkbFlatten(nltForGeomType) == ogr.wkbMultiLineString )
-            bForceToMultiLineString = true;
 
         Layer destLayer;
         FeatureDefn srcFeatureDefine;
@@ -245,23 +236,16 @@ public class SimpleDatasourceTransfer implements DatasourceTransfer {
                             destGeometry = poNewGeom;
                         }
                     }
-//                    if (bForceToPoint) {
-//                        destFeature.SetGeometryDirectly(ogr.ForceTo(destGeometry, ogr.wkbPoint));
-//                    } else if (bForceToLineString) {
-//                        destFeature.SetGeometryDirectly(ogr.ForceToLineString(destGeometry));
-//                    } else if (bForceToPolygon) {
-//                        destFeature.SetGeometryDirectly(ogr.ForceToPolygon(destGeometry));
-//                    }
-                    if (bForceToPoint) {
-                        destFeature.SetGeometryDirectly(ogr.ForceTo(destGeometry, ogr.wkbPoint));
-                    } else if (bForceToLineString) {
-                        destFeature.SetGeometryDirectly(ogr.ForceTo(destGeometry, ogr.wkbLineString));
-                    } else if (bForceToPolygon) {
-                        destFeature.SetGeometryDirectly(ogr.ForceToPolygon(destGeometry));
-                    } else if (bForceToMultiPolygon) {
-                        destFeature.SetGeometryDirectly(ogr.ForceToMultiPolygon(destGeometry));
-                    } else if (bForceToMultiLineString) {
-                        destFeature.SetGeometryDirectly(ogr.ForceToMultiLineString(destGeometry));
+                    int destGeometryType = destGeometry.GetGeometryType();
+                    if (destLayer.GetGeomType() != destGeometryType) {
+                        if (bForceToPoint && (destGeometryType == ogr.wkbPoint25D)) {
+                            destFeature.SetGeometryDirectly(ogr.ForceTo(destGeometry, ogr.wkbPoint));
+                        } else if (bForceToLineString && (destGeometryType == ogr.wkbLineString25D || destGeometryType == ogr.wkbMultiLineString25D)) {
+                            destFeature.SetGeometryDirectly(ogr.ForceTo(destGeometry, ogr.wkbLineString));
+                        } else if (bForceToPolygon && (destGeometryType == ogr.wkbLineString25D ||
+                                destGeometryType == ogr.wkbMultiLineString25D || destGeometryType == ogr.wkbPolygon25D)) {
+                            destFeature.SetGeometryDirectly(ogr.ForceToPolygon(destGeometry));
+                        }
                     }
                 }
                 gdal.ErrorReset();
@@ -269,8 +253,8 @@ public class SimpleDatasourceTransfer implements DatasourceTransfer {
                 try {
                     createFeatureResult = destLayer.CreateFeature(destFeature);
                 } catch (Exception e) {
-                    System.err.println("DestLayer.CreateFeature失败， layer`s GeometryType is [" + destLayer.GetGeomType()
-                            + "] But the feature`s GeometryType is [" + destFeature.GetGeometryRef().GetGeometryType() + "]");
+//                    System.err.println("DestLayer.CreateFeature失败， layer`s GeometryType is [" + destLayer.GetGeomType()
+//                            + "] But the feature`s GeometryType is [" + destFeature.GetGeometryRef().GetGeometryType() + "]");
 //                    e.printStackTrace();
                 }
                 if (createFeatureResult != 0 && !bSkipFailures) {
@@ -290,6 +274,10 @@ public class SimpleDatasourceTransfer implements DatasourceTransfer {
         }
         if (nGroupTransactions > 0)
             destLayer.CommitTransaction();
+        srcLayer.delete();
+        destLayer.delete();
+        srcSource.delete();
+        destSource.delete();
         return true;
     }
 }
