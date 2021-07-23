@@ -18,7 +18,7 @@ public class ConcurrentShardingDataSourceTransfer implements DatasourceTransfer 
     private static final int DEFAULT_TILE_SIZE_THRESHOLD = 300000;
 
     static boolean bSkipFailures = true;
-    static int nGroupTransactions = 100000;
+    static int nGroupTransactions = 2000;
     //    static int nGroupTransactions = 1;
     static boolean bPreserveFID = false;
     static final int OGRNullFID = -1;

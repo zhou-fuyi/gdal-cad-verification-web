@@ -12,7 +12,7 @@ import java.util.Vector;
 public class SimpleDatasourceTransfer implements DatasourceTransfer {
 
     static boolean bSkipFailures = true;
-    static int nGroupTransactions = 20000;
+    static int nGroupTransactions = 2000;
 //    static int nGroupTransactions = 1;
     static boolean bPreserveFID = false;
     static final int OGRNullFID = -1;
@@ -242,7 +242,8 @@ public class SimpleDatasourceTransfer implements DatasourceTransfer {
                     int destGeometryType = destGeometry.GetGeometryType();
                     if (destLayer.GetGeomType() != destGeometryType) {
                         if (bForceToPoint && (destGeometryType == ogr.wkbPoint25D)) {
-                            destFeature.SetGeometryDirectly(ogr.ForceTo(destGeometry, ogr.wkbPoint));
+//                            destFeature.SetGeometryDirectly(ogr.ForceTo(destGeometry, ogr.wkbPoint));
+                            destGeometry.FlattenTo2D();
                         } else if (bForceToLineString && (destGeometryType == ogr.wkbLineString25D || destGeometryType == ogr.wkbMultiLineString25D)) {
                             destFeature.SetGeometryDirectly(ogr.ForceTo(destGeometry, ogr.wkbLineString));
                         } else if (bForceToPolygon && (destGeometryType == ogr.wkbLineString25D ||
@@ -256,8 +257,8 @@ public class SimpleDatasourceTransfer implements DatasourceTransfer {
                 try {
                     createFeatureResult = destLayer.CreateFeature(destFeature);
                 } catch (Exception e) {
-//                    System.err.println("DestLayer.CreateFeature失败， layer`s GeometryType is [" + destLayer.GetGeomType()
-//                            + "] But the feature`s GeometryType is [" + destFeature.GetGeometryRef().GetGeometryType() + "]");
+                    System.err.println("DestLayer.CreateFeature失败， layer`s GeometryType is [" + destLayer.GetGeomType()
+                            + "] But the feature`s GeometryType is [" + destFeature.GetGeometryRef().GetGeometryType() + "]");
 //                    e.printStackTrace();
                 }
                 if (createFeatureResult != 0 && !bSkipFailures) {
