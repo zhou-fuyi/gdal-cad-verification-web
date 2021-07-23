@@ -19,8 +19,8 @@ import java.util.concurrent.CountDownLatch;
 public class TransformFirstDxfParseService implements DxfParseService {
 
     @Autowired
-    @Qualifier("shardingTransfer")
-//    @Qualifier("simpleTransfer")
+//    @Qualifier("shardingTransfer")
+    @Qualifier("simpleTransfer")
     private DatasourceTransfer datasourceTransfer;
 
     static {
@@ -55,7 +55,7 @@ public class TransformFirstDxfParseService implements DxfParseService {
         destSource.delete();
         Layer sourceLayer = srcSource.GetLayer(0);
         if (sourceLayer == null) {
-            throw new RuntimeException("FAILURE: Couldn't fetch layer " + sourceLayer + "!");
+            throw new RuntimeException("FAILURE: Couldn't fetch layer [entities] !");
         }
         Vector lcoOptions = new Vector();
         lcoOptions.add("GEOMETRY_NAME=geom");

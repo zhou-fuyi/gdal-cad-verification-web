@@ -12,7 +12,7 @@ import java.util.Vector;
 public class SimpleDatasourceTransfer implements DatasourceTransfer {
 
     static boolean bSkipFailures = true;
-    static int nGroupTransactions = 200;
+    static int nGroupTransactions = 20000;
 //    static int nGroupTransactions = 1;
     static boolean bPreserveFID = false;
     static final int OGRNullFID = -1;
@@ -64,7 +64,7 @@ public class SimpleDatasourceTransfer implements DatasourceTransfer {
             throw new RuntimeException("[" + destSourceDbPath + "] 无法获取链接");
         }
         Layer srcLayer = srcSource.ExecuteSQL(filters.get(nltForGeomType));
-
+        System.out.println("Table is : " + nlnNameForNewLayer + " And the FeatureCount is : " + srcLayer.GetFeatureCount());
 
         boolean bForceToPoint = false;
         boolean bForceToLineString = false;
@@ -177,8 +177,11 @@ public class SimpleDatasourceTransfer implements DatasourceTransfer {
         srcLayer.ResetReading();
 
         /* For datasources which support transactions, StartTransaction creates a transaction. */
-        if (nGroupTransactions > 0)
+        if (nGroupTransactions > 0){
             destLayer.StartTransaction();
+            destLayer.CommitTransaction();
+            destLayer.StartTransaction();
+        }
 
         while (true) {
             Feature destFeature = null;

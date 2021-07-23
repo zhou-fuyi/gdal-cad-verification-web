@@ -9,22 +9,20 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.locks.StampedLock;
 
 @Component("shardingTransfer")
 public class ConcurrentShardingDataSourceTransfer implements DatasourceTransfer {
 
-    private static final int DEFAULT_TILE_SIZE = 5000;
-    private static final int DEFAULT_THRESHOLD = 20000;
-    private static final int DEFAULT_TILE_SIZE_THRESHOLD = 70000;
+    private static final int DEFAULT_TILE_SIZE = 200000;
+    private static final int DEFAULT_THRESHOLD = 900000;
+    private static final int DEFAULT_TILE_SIZE_THRESHOLD = 300000;
 
     static boolean bSkipFailures = true;
-    static int nGroupTransactions = 2000;
+    static int nGroupTransactions = 100000;
     //    static int nGroupTransactions = 1;
     static boolean bPreserveFID = false;
     static final int OGRNullFID = -1;
     static int nFIDToFetch = OGRNullFID;
-    private int tileSize = DEFAULT_TILE_SIZE;
 
     public static class GeomOperation {
         private GeomOperation() {
@@ -41,6 +39,7 @@ public class ConcurrentShardingDataSourceTransfer implements DatasourceTransfer 
 
     @Override
     public boolean translateLayer(String srcSourPath, String destSourceDbPath, Map<Integer, String> filters, Vector lcoOptions, String nlnNameForNewLayer, boolean bTransform, SpatialReference targetSRS, SpatialReference sourceSRS, Vector papszSelFields, boolean bAppend, int nltForGeomType, boolean bOverwrite, SimpleDatasourceTransfer.GeomOperation eGeomOp, double dfGeomOpParam, Vector papszFieldTypesToString, long nCountLayerFeatures, Geometry poClipSrc, Geometry poClipDst, boolean bExplodeCollections, String pszZField, String pszWHERE, ProgressCallback pfnProgress) {
+        int tileSize = DEFAULT_TILE_SIZE;
         DataSource srcSource = ogr.Open(srcSourPath, false);
         if (srcSource == null) {
             throw new RuntimeException("[" + srcSourPath + "] 文件无法解析");
@@ -56,11 +55,12 @@ public class ConcurrentShardingDataSourceTransfer implements DatasourceTransfer 
         }
         if (featureCount > DEFAULT_THRESHOLD) {
             int availProcessors = Runtime.getRuntime().availableProcessors();
-            tileSize = Long.valueOf(featureCount).intValue() / (availProcessors * 2);
-            if (tileSize > DEFAULT_TILE_SIZE_THRESHOLD){
+            tileSize = Long.valueOf(featureCount).intValue() / availProcessors;
+            if (tileSize > DEFAULT_TILE_SIZE_THRESHOLD) {
                 tileSize = DEFAULT_TILE_SIZE_THRESHOLD;
             }
         }
+        System.out.println("Table is : " + nlnNameForNewLayer + " And the FeatureCount is : " + featureCount);
         System.out.println("Tile Size is : " + tileSize);
         // 分片逻辑
         int tileCount = Long.valueOf(featureCount).intValue() / tileSize;
@@ -75,6 +75,7 @@ public class ConcurrentShardingDataSourceTransfer implements DatasourceTransfer 
         int index = 0;
         while (index < targetTileCount) {
             int finalIndex = index;
+            int finalTileSize = tileSize;
             ExecutorTemplate.executor.execute(() -> {
                 try {
                     results[finalIndex] = concurrentShardingTranslateLayer(srcSourPath,
@@ -83,7 +84,7 @@ public class ConcurrentShardingDataSourceTransfer implements DatasourceTransfer 
                             nltForGeomType, bOverwrite, eGeomOp, dfGeomOpParam,
                             papszFieldTypesToString, nCountLayerFeatures, poClipSrc,
                             poClipDst, bExplodeCollections, pszZField, pszWHERE, pfnProgress,
-                            targetTileCount, finalIndex, tileRemainder);
+                            targetTileCount, finalIndex, tileRemainder, finalTileSize);
                     System.out.println("图层转换作业: 线程" + Thread.currentThread().getName() + "已完成作业");
                 } catch (Exception e) {
                     results[finalIndex] = false;
@@ -108,7 +109,7 @@ public class ConcurrentShardingDataSourceTransfer implements DatasourceTransfer 
     }
 
     //实际执行转换操作
-    private boolean concurrentShardingTranslateLayer(String srcSourPath, String destSourceDbPath, Map<Integer, String> filters, Vector lcoOptions, String nlnNameForNewLayer, boolean bTransform, SpatialReference targetSRS, SpatialReference sourceSRS, Vector papszSelFields, boolean bAppend, int nltForGeomType, boolean bOverwrite, SimpleDatasourceTransfer.GeomOperation eGeomOp, double dfGeomOpParam, Vector papszFieldTypesToString, long nCountLayerFeatures, Geometry poClipSrc, Geometry poClipDst, boolean bExplodeCollections, String pszZField, String pszWHERE, ProgressCallback pfnProgress, int tileCount, int currentThreadIndex, int tileRemainder) {
+    private boolean concurrentShardingTranslateLayer(String srcSourPath, String destSourceDbPath, Map<Integer, String> filters, Vector lcoOptions, String nlnNameForNewLayer, boolean bTransform, SpatialReference targetSRS, SpatialReference sourceSRS, Vector papszSelFields, boolean bAppend, int nltForGeomType, boolean bOverwrite, SimpleDatasourceTransfer.GeomOperation eGeomOp, double dfGeomOpParam, Vector papszFieldTypesToString, long nCountLayerFeatures, Geometry poClipSrc, Geometry poClipDst, boolean bExplodeCollections, String pszZField, String pszWHERE, ProgressCallback pfnProgress, int tileCount, int currentThreadIndex, int tileRemainder, int tileSize) {
 
         DataSource srcSource = ogr.Open(srcSourPath, false);
         if (srcSource == null) {
@@ -238,8 +239,11 @@ public class ConcurrentShardingDataSourceTransfer implements DatasourceTransfer 
         srcLayer.ResetReading();
 
         /* For datasources which support transactions, StartTransaction creates a transaction. */
-        if (nGroupTransactions > 0)
+        if (nGroupTransactions > 0) {
             destLayer.StartTransaction();
+            destLayer.CommitTransaction();
+            destLayer.StartTransaction();
+        }
 
         System.out.println("Table is :" + nlnNameForNewLayer + " And the StartIndex is : " + finalFeatureStartIndex);
         srcLayer.SetNextByIndex(finalFeatureStartIndex);
@@ -336,6 +340,7 @@ public class ConcurrentShardingDataSourceTransfer implements DatasourceTransfer 
             srcFeature = null;
         }
         if (nGroupTransactions > 0) {
+            System.out.println("Last Commit: " + nlnNameForNewLayer);
             destLayer.CommitTransaction();
         }
         srcLayer.delete();

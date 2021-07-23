@@ -12,6 +12,6 @@ public class ExecutorTemplate {
 
 
     public static Executor executor = new ThreadPoolExecutor(DEFAULT_CORE_SIZE, DEFAULT_MAX_SIZE,
-            7000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+            0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 
 }
