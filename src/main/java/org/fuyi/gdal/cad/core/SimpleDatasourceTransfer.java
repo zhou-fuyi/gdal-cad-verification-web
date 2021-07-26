@@ -94,6 +94,9 @@ public class SimpleDatasourceTransfer implements DatasourceTransfer {
 
                 if (poLayer != null
                         && poLayer.GetName().equals(destLayer.GetName())) {
+//                    destSource.ExecuteSQL("drop table" + poLayer.GetName());
+                    destSource.DeleteLayer(iLayer);
+                    destLayer = null;
                     break;
                 }
             }

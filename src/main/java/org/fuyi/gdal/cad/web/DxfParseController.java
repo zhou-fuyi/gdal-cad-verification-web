@@ -33,12 +33,24 @@ public class DxfParseController {
 
     @Autowired
     private DxfParseService dxfParseService;
-    private final String pathPrefix = "/home/fuyi/work/origin/";
+
 
     private BashExecutor bashExecutor = new BashExecutor();
 
     @GetMapping("/{path}")
     public Collection<DxfGeometry> parseDxfFile(@PathVariable String path) throws IllegalAccessException, InterruptedException {
+        long startTime = System.currentTimeMillis();
+        String pathPrefix = "/home/fuyi/work/dxf/";
+        path = pathPrefix + path;
+        Collection result = dxfParseService.parse(dwg2dxf(new File(path)));
+        long endTime = System.currentTimeMillis();
+        System.out.println("Total --> 执行结果，共计耗时约：" + ((endTime - startTime) / 1000) + "秒");
+        return result;
+    }
+
+    @GetMapping("/dwg/{path}")
+    public Collection<DxfGeometry> parseDwgFile(@PathVariable String path) throws IllegalAccessException, InterruptedException {
+        String pathPrefix = "/home/fuyi/work/origin/";
         long startTime = System.currentTimeMillis();
         path = pathPrefix + path;
         Collection result = dxfParseService.parse(dwg2dxf(new File(path)));
