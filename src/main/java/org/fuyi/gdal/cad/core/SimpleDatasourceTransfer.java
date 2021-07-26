@@ -6,6 +6,7 @@ import org.gdal.osr.SpatialReference;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.Vector;
 
 @Component("simpleTransfer")
@@ -170,6 +171,13 @@ public class SimpleDatasourceTransfer implements DatasourceTransfer {
             }
         }
 
+        // 创建自定义字段
+        FieldDefn idFile = new FieldDefn();
+        idFile.SetWidth(64);
+        idFile.SetType(ogr.OFTString);
+        idFile.SetName("id");
+        destLayer.CreateField(idFile);
+
         /* -------------------------------------------------------------------- */
         /*      Transfer features.                                              */
         /* -------------------------------------------------------------------- */
@@ -225,6 +233,8 @@ public class SimpleDatasourceTransfer implements DatasourceTransfer {
                     destFeature = null;
                     return false;
                 }
+                // 为自定义字段赋值
+                destFeature.SetField("id", UUID.randomUUID().toString());
 
                 if (bPreserveFID)
                     destFeature.SetFID(srcFeature.GetFID());
@@ -255,6 +265,7 @@ public class SimpleDatasourceTransfer implements DatasourceTransfer {
                         }
                     }
                 }
+
                 gdal.ErrorReset();
                 int createFeatureResult = -1;
                 try {
